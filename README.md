@@ -8,6 +8,8 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 * **smart process selection** by PID or extended regular-expression pattern,
 * **interactive confirmation** by default, plus dry-run and verbose modes.
 
+<img width="1602" height="502" alt="image" src="https://github.com/user-attachments/assets/e1c3bba6-4bc1-4a3e-a6ed-591a0493f069" />
+
 ---
 
 ## Features
