@@ -8,8 +8,6 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 * **smart process selection** by PID or extended regular-expression pattern,
 * **interactive confirmation** by default, plus dry-run and verbose modes.
 
-<img width="1602" height="502" alt="image" src="https://github.com/user-attachments/assets/e1c3bba6-4bc1-4a3e-a6ed-591a0493f069" />
-
 ---
 
 ## Features
@@ -68,7 +66,7 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 
 ## Requirements
 
-* Bash (tested with modern Bash; uses functions, arrays, `[[ ... ]]`, `getopts`, etc.)
+* Bash
 * Standard Unix utilities: `ps`, `kill`, `pgrep`, `printf`, `sleep`
 * A POSIX‑like environment (Linux, BSD, WSL, etc.)
 
@@ -125,6 +123,8 @@ gkill geany
 # As root, search across all users
 sudo gkill sshd
 ```
+
+<img width="1602" height="502" alt="image" src="https://github.com/user-attachments/assets/e1c3bba6-4bc1-4a3e-a6ed-591a0493f069" />
 
 ### Dry‑run first
 
