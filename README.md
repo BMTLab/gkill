@@ -207,14 +207,13 @@ gkill [-f] [-t seconds] [-n] [-v] [-h] <pid|pattern>
 
 ### Options
 
-| Option         | Type      | Default    | Description                                                               |                                                                             |
-| -------------- | --------- | ---------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `-h`           | flag      | -          | Show help/usage and exit.                                                 |                                                                             |
-| `-f`           | flag      | `false`    | **Force mode**: skip the confirmation prompt and start termination.       |                                                                             |
-| `-t <seconds>` | integer   | `5`        | Timeout to wait after each signal before escalating to the next one.      |                                                                             |
-| `-n`           | flag      | `false`    | **Dry‑run**: resolve and list targets, but do not send any signals.       |                                                                             |
-| `-v`           | flag      | `false`    | **Verbose** output: log every signal step and timeout result per process. |                                                                             |
-| `<pid          | pattern>` | positional | -                                                                         | Target PID or Extended Regex pattern to match against process command line. |
+| Option          | Type      | Default    | Description                                                                 |
+| --------------- | --------- | ---------- | --------------------------------------------------------------------------- |
+| `-h`            | flag      | -          | Show help/usage and exit.                                                   |
+| `-f`            | flag      | `false`    | **Force mode**: skip the confirmation prompt and start termination.         |
+| `-t <seconds>`  | integer   | `5`        | Timeout to wait after each signal before escalating to the next one.        |
+| `-n`            | flag      | `false`    | **Dry‑run**: resolve and list targets, but do not send any signals.         |
+| `-v`            | flag      | `false`    | **Verbose** output: log every signal step and timeout result per process.   |
 
 Behavior summary:
 
