@@ -4,7 +4,7 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 
 `gkill` wraps the standard `kill`/`pgrep` tooling and adds:
 
-* a **safe escalation chain** (`SIGTERM → SIGINT → SIGKILL`) with configurable timeouts,
+* a **safe escalation chain** (`SIGTERM -> SIGINT -> SIGKILL`) with configurable timeouts,
 * **smart process selection** by PID or extended regular-expression pattern,
 * **interactive confirmation** by default, plus dry-run and verbose modes.
 
