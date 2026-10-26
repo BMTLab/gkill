@@ -294,6 +294,7 @@ function __gk_should_skip_pid() {
   local -r candidate_pid="$2"
 
   local anc_pid
+
   for anc_pid in "${_ancestors_array[@]}"; do
     if [[ $candidate_pid -eq $anc_pid ]]; then
       return 0
@@ -347,6 +348,7 @@ function __gk_resolve_pids() {
     # Verify it actually exists
     if __gk_process_exists "$search_query_string"; then
       _resolved_pids_array+=("$search_query_string")
+
       return 0
     fi
   fi
@@ -357,6 +359,7 @@ function __gk_resolve_pids() {
   __gk_build_pgrep_flags pgrep_flags
 
   local raw_pgrep_output
+
   if raw_pgrep_output=$(pgrep "${pgrep_flags[@]}" "$search_query_string"); then
     local current_pid_item
 
@@ -517,12 +520,14 @@ function __gk_attempt_signal_step() {
     fi
 
     __gk_log "$is_verbose_mode" " FAILED (${reason_msg})"
+
     return 1
   fi
 
   # 2. Wait
   if __gk_wait_for_pid_death "$target_pid" "$step_timeout_seconds"; then
     __gk_log "$is_verbose_mode" ' Terminated.'
+
     return 0
   fi
 
@@ -567,6 +572,7 @@ function __gk_kill_single_pid() {
 
   # Header Log (Always show if verbose or dry-run)
   local should_log_header=false
+
   if [[ $enable_verbose_logging == true || $enable_dry_run_mode == true ]]; then
     should_log_header=true
   fi
@@ -585,6 +591,7 @@ function __gk_kill_single_pid() {
       || [[ $enable_dry_run_mode == true ]]; then
       __gk_log true "$(printf '  Not running anymore. Skipping.')"
     fi
+
     return 0
   fi
 
@@ -615,6 +622,7 @@ function __gk_kill_single_pid() {
 
   if ! __gk_process_exists "$pid_to_kill"; then
     __gk_log "$enable_verbose_logging" " Killed!"
+
     return 0
   fi
 
@@ -687,6 +695,7 @@ function __gk_parse_cli_args() {
         ;;
       h)
         _is_help_requested=true
+
         return 0
         ;;
       :)
@@ -701,6 +710,7 @@ function __gk_parse_cli_args() {
         ;;
     esac
   done
+
   shift $((OPTIND - 1))
 
   if [[ $# -eq 0 ]]; then
@@ -770,6 +780,7 @@ function __gk_show_targets() {
 
   if [[ $is_dry_run_mode == true ]]; then
     printf '\n'
+
     return 0
   fi
 
@@ -846,6 +857,7 @@ function gkill() {
   # 2. Handle Help
   if [[ $is_help_requested == true ]]; then
     __gk_usage
+
     return 0
   fi
 
@@ -858,6 +870,7 @@ function gkill() {
 
   # 4. Resolve PIDs
   local -a resolved_target_pids_array=()
+
   if ! __gk_resolve_pids \
     "$user_search_query" \
     resolved_target_pids_array; then
@@ -872,6 +885,7 @@ function gkill() {
   # 5. Dry-run: show table and exit
   if [[ $is_dry_run_mode == true ]]; then
     __gk_show_targets resolved_target_pids_array true
+
     return 0
   fi
 
@@ -879,6 +893,7 @@ function gkill() {
   if [[ $is_force_mode == false ]]; then
     if ! __gk_show_targets resolved_target_pids_array false; then
       __gk_log true 'Aborted by user.'
+
       return 0
     fi
   fi
@@ -910,6 +925,7 @@ function gkill() {
 if [[ $GK_SCRIPT_SOURCED == false ]]; then
   gkill "$@"
   exit_code=$?
+
   exit "$exit_code"
 fi
 ### End
