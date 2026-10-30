@@ -24,6 +24,7 @@
 #       terminating its own invocation chain (sudo, parent shells, etc.).
 #     - Interactively asks for confirmation unless -f is provided.
 #     - Waits a specified duration between signals to verify termination.
+#     - Colors its output on a terminal only; NO_COLOR turns the colors off.
 #
 #   Permissions & Scope:
 #     - Standard User: Searches and kills ONLY processes owned
@@ -115,6 +116,10 @@ Patterns:
 Permissions:
   - Without sudo: Limits search to your own processes.
   - With sudo: Searches all system processes.
+
+Colors:
+  Colors go to a terminal only, so a pipe or a file gets plain text.
+  Set NO_COLOR to a non-empty value to turn them off on a terminal too.
 EOF
 }
 
@@ -142,11 +147,27 @@ function __gk_error() {
 }
 
 #######################################
+# Decide whether the output should be colored.
+#
+# Colors go to a terminal only, and NO_COLOR (https://no-color.org)
+# turns them off, so that a pipe, a file or an agent gets plain text.
+#
+# Globals:
+#   NO_COLOR (read).
+#
+# Returns:
+#   0 to use colors; 1 otherwise.
+#######################################
+function __gk_should_color() {
+  [[ -z "${NO_COLOR:-}" && -t 1 ]]
+}
+
+#######################################
 # Centralized logging function.
 # Handles verbosity checks and color formatting.
 #
-# Automatically detects if stdout is a TTY.
-# If piped (not a TTY), suppresses color codes to keep logs clean.
+# Colors only where __gk_should_color allows them,
+# so that a pipe gets plain text.
 #
 # Arguments:
 #   1: Should Log (bool) - usually passed from is_verbose.
@@ -167,8 +188,8 @@ function __gk_log() {
     return 0
   fi
 
-  # Auto-disable color if stdout is not a terminal
-  if [[ ! -t 1 ]]; then
+  # A pipe and NO_COLOR get no color, as __gk_should_color decides.
+  if ! __gk_should_color; then
     text_color_ansi=''
   fi
 
@@ -564,11 +585,17 @@ function __gk_kill_single_pid() {
   local -r process_name="$(__gk_get_process_name "$pid_to_kill")"
   local -r process_owner="$(__gk_get_process_owner "$pid_to_kill")"
 
-  # Local Colors
-  local -r color_red='\033[31m'
-  local -r color_yellow='\033[33m'
-  local -r color_green='\033[32m'
-  local -r color_reset='\033[0m'
+  # Colors go to a terminal only, as __gk_should_color decides.
+  # The header and the failure line carry them inside their text,
+  # where __gk_log cannot strip them.
+  local color_red='' color_yellow='' color_green='' color_reset=''
+
+  if __gk_should_color; then
+    color_red='\033[31m'
+    color_yellow='\033[33m'
+    color_green='\033[32m'
+    color_reset='\033[0m'
+  fi
 
   # Header Log (Always show if verbose or dry-run)
   local should_log_header=false
@@ -749,8 +776,13 @@ function __gk_show_targets() {
   local -n _in_target_pids_array="$1"
   local -r is_dry_run_mode="$2"
 
-  local -r color_red='\033[31m'
-  local -r color_reset='\033[0m'
+  # Colors go to a terminal only, as __gk_should_color decides.
+  local color_red='' color_reset=''
+
+  if __gk_should_color; then
+    color_red='\033[31m'
+    color_reset='\033[0m'
+  fi
 
   if [[ $is_dry_run_mode == true ]]; then
     printf '\nDRY-RUN: The following processes match your query:\n'

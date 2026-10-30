@@ -50,7 +50,8 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 5. **Verbose, TTY‑aware logging**
 
    * `-v` prints detailed steps for each PID (signals sent, timeouts, outcomes).
-   * Automatically disables ANSI colors when stdout is not a TTY (e.g. when piping).
+   * Automatically disables ANSI colors when stdout is not a TTY (e.g. when piping),
+     and when `NO_COLOR` holds a non-empty value, as [no-color.org](https://no-color.org) asks.
    * Clear separation between **info logs** and **error messages**.
 
 6. **Script or function usage**
