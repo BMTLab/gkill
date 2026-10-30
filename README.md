@@ -210,7 +210,7 @@ gkill [-f] [-t seconds] [-n] [-v] [-h] <pid|pattern>
 
 | Option          | Type      | Default    | Description                                                                 |
 | --------------- | --------- | ---------- | --------------------------------------------------------------------------- |
-| `-h`            | flag      | -          | Show help/usage and exit.                                                   |
+| `-h`, `--help`  | flag      | -          | Show help/usage and exit.                                                   |
 | `-f`            | flag      | `false`    | **Force mode**: skip the confirmation prompt and start termination.         |
 | `-t <seconds>`  | integer   | `5`        | Timeout to wait after each signal before escalating to the next one.        |
 | `-n`            | flag      | `false`    | **Dry‑run**: resolve and list targets, but do not send any signals.         |

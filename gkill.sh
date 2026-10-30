@@ -37,6 +37,7 @@
 #   gkill.sh -t 10 <name>    # Wait 10 seconds between signals
 #   gkill.sh -n <pattern>    # Dry-run (show what would be killed)
 #   gkill.sh -v <pid>        # Verbose output
+#   gkill.sh --help          # Show the usage
 #   sudo gkill.sh <service>  # Kill system/any process (requires root)
 #
 #   Note on Patterns:
@@ -106,7 +107,7 @@ Options:
                 before escalating to the next, stronger signal.
   -n            Dry-run. List matching processes but do not send signals.
   -v            Verbose mode. Show detailed status messages.
-  -h            Show this help message.
+  -h, --help    Show this help message.
 
 Patterns:
   Input is treated as an Extended Regex (pgrep -f).
@@ -701,7 +702,8 @@ function __gk_parse_cli_args() {
   local current_option_flag
   local current_option_arg
 
-  while getopts ':t:nfvh' current_option_flag; do
+  # The option -: lets getopts read --help, as the option - with the value help.
+  while getopts ':t:nfvh-:' current_option_flag; do
     case "$current_option_flag" in
       t)
         current_option_arg="$OPTARG"
@@ -721,6 +723,16 @@ function __gk_parse_cli_args() {
         _is_verbose=true
         ;;
       h)
+        _is_help_requested=true
+
+        return 0
+        ;;
+      -)
+        if [[ "${OPTARG}" != 'help' ]]; then
+          __gk_error "Invalid option: --${OPTARG}" "${GK_ERR_USAGE}" \
+            || return "$?"
+        fi
+
         _is_help_requested=true
 
         return 0
