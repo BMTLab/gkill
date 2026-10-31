@@ -22,7 +22,8 @@
 #     - Resolves the input to a list of PIDs (using pgrep -f).
 #     - Excludes the script's own PID and its ancestors to prevent
 #       terminating its own invocation chain (sudo, parent shells, etc.).
-#     - Interactively asks for confirmation unless -f is provided.
+#     - Terminates only with -f; without it, lists the matches and stops,
+#       since it never asks: a script or an agent has no terminal to answer on.
 #     - Waits a specified duration between signals to verify termination.
 #     - Colors its output on a terminal only; NO_COLOR turns the colors off.
 #
@@ -32,8 +33,8 @@
 #     - Root/Sudo: Searches ALL processes on the system.
 #
 # Usage:
-#   gkill.sh <pid|pattern>
-#   gkill.sh -f nginx        # Force mode (no confirmation)
+#   gkill.sh <pid|pattern>   # List the matches and terminate none
+#   gkill.sh -f nginx        # Terminate the matches
 #   gkill.sh -t 10 <name>    # Wait 10 seconds between signals
 #   gkill.sh -n <pattern>    # Dry-run (show what would be killed)
 #   gkill.sh -v <pid>        # Verbose output
@@ -60,6 +61,8 @@
 #      Some processes could not be terminated (permission denied, etc.).
 #   5: GK_ERR_MISSING_DEPENDENCY
 #      Required system utility (pgrep) is missing.
+#   6: GK_ERR_FORCE_REQUIRED
+#      Processes match, but -f was not given, so none was terminated.
 
 # Detect whether script is sourced or executed.
 # bashsupport disable=BP5001
@@ -86,6 +89,9 @@ fi
 if [[ -z ${GK_ERR_MISSING_DEPENDENCY+x} ]]; then
   readonly GK_ERR_MISSING_DEPENDENCY=5
 fi
+if [[ -z ${GK_ERR_FORCE_REQUIRED+x} ]]; then
+  readonly GK_ERR_FORCE_REQUIRED=6
+fi
 
 #######################################
 # Print usage information.
@@ -101,7 +107,8 @@ Usage:
   gkill [-f] [-t seconds] [-n] [-v] [-h] <pid|pattern>
 
 Options:
-  -f            Force mode. Do not ask for confirmation before killing.
+  -f            Terminate the matching processes. Without -f, gkill lists them,
+                terminates none and exits with GK_ERR_FORCE_REQUIRED (6).
   -t <seconds>  Timeout in seconds to wait after each signal (default: 5).
                 The script waits up to this time for the process to exit
                 before escalating to the next, stronger signal.
@@ -121,6 +128,16 @@ Permissions:
 Colors:
   Colors go to a terminal only, so a pipe or a file gets plain text.
   Set NO_COLOR to a non-empty value to turn them off on a terminal too.
+
+Exit codes:
+  0  Success: the targets are gone, or -n listed them.
+  1  GK_ERR_GENERAL: an unexpected error.
+  2  GK_ERR_USAGE: a wrong option, a missing PID or pattern, a wrong timeout.
+  3  GK_ERR_NO_PROCESS: no running process matches.
+  4  GK_ERR_PARTIAL_FAILURE: some processes are still alive.
+  5  GK_ERR_MISSING_DEPENDENCY: pgrep is missing.
+  6  GK_ERR_FORCE_REQUIRED: processes match, but -f was not given,
+     so none was terminated; run gkill again with -f.
 EOF
 }
 
@@ -771,37 +788,20 @@ function __gk_parse_cli_args() {
 }
 
 #######################################
-# Show targets table and optionally ask for confirmation.
-#
-# In dry-run mode, only prints the table with a DRY-RUN header.
-# In normal mode, prints the table and asks the user to confirm.
+# Show the table of targets under a header line.
 #
 # Arguments:
 #   1: Nameref array of PIDs.
-#   2: Dry-run flag (bool).
+#   2: Header line, such as the DRY-RUN one.
 #
-# Returns:
-#   0: Proceed / acknowledged (or dry-run).
-#   1: User declined to proceed (normal mode).
+# Outputs:
+#   The header and the table to stdout.
 #######################################
 function __gk_show_targets() {
   local -n _in_target_pids_array="$1"
-  local -r is_dry_run_mode="$2"
+  local -r header_line="$2"
 
-  # Colors go to a terminal only, as __gk_should_color decides.
-  local color_red='' color_reset=''
-
-  if __gk_should_color; then
-    color_red='\033[31m'
-    color_reset='\033[0m'
-  fi
-
-  if [[ $is_dry_run_mode == true ]]; then
-    printf '\nDRY-RUN: The following processes match your query:\n'
-  else
-    printf '\nThe following processes will be %bTERMINATED%b:\n' \
-      "$color_red" "$color_reset"
-  fi
+  printf '\n%s\n' "${header_line}"
 
   # Header row
   printf '  %-8s %-12s %-20s %s\n' \
@@ -822,21 +822,7 @@ function __gk_show_targets() {
       "$current_proc_name" "$current_proc_cmdline"
   done
 
-  if [[ $is_dry_run_mode == true ]]; then
-    printf '\n'
-
-    return 0
-  fi
-
-  printf '\nDo you want to continue? [y/N] '
-  local user_response
-  read -r user_response
-
-  if [[ $user_response =~ ^[yY]([eE][sS])?$ ]]; then
-    return 0
-  fi
-
-  return 1
+  printf '\n'
 }
 
 #######################################
@@ -928,18 +914,20 @@ function gkill() {
 
   # 5. Dry-run: show table and exit
   if [[ $is_dry_run_mode == true ]]; then
-    __gk_show_targets resolved_target_pids_array true
+    __gk_show_targets resolved_target_pids_array \
+      'DRY-RUN: The following processes match your query:'
 
     return 0
   fi
 
-  # 6. Confirmation (only if NOT force)
+  # 6. Without -f, list the targets and stop.
+  # gkill never asks, since a script or an agent has no terminal to answer on.
   if [[ $is_force_mode == false ]]; then
-    if ! __gk_show_targets resolved_target_pids_array false; then
-      __gk_log true 'Aborted by user.'
-
-      return 0
-    fi
+    __gk_show_targets resolved_target_pids_array \
+      'The following processes match your query:'
+    __gk_error 'gkill terminates nothing without -f: run it again with -f to terminate these processes.' \
+      "${GK_ERR_FORCE_REQUIRED}" \
+      || return "$?"
   fi
 
   # 7. Process Batch

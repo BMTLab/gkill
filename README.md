@@ -6,7 +6,8 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
 
 * a **safe escalation chain** (`SIGTERM -> SIGINT -> SIGKILL`) with configurable timeouts,
 * **smart process selection** by PID or extended regular-expression pattern,
-* **interactive confirmation** by default, plus dry-run and verbose modes.
+* a **listing by default**, which terminates nothing until `-f` asks for it,
+  plus dry-run and verbose modes.
 
 ---
 
@@ -35,17 +36,15 @@ A small, focused CLI helper to gracefully terminate Unix processes with signal e
      * `sudo` / `doas` / other wrappers up to PID 1.
    * This prevents accidentally killing the very shell session that launched `gkill`.
 
-4. **Dry‑run and interactive confirmation**
+4. **Dry‑run, listing and force mode**
 
    * `-n` / dry‑run: resolve and display matching processes without sending any signals.
 
-   * In normal mode, shows a table of targets and asks:
+   * Without `-f`, `gkill` shows the table of targets, terminates none,
+     and exits with `GK_ERR_FORCE_REQUIRED` (6).
+     It never asks, since a script or an agent has no terminal to answer on.
 
-     ```text
-     Do you want to continue? [y/N]
-     ```
-
-   * `-f` / force mode: skip the confirmation prompt and proceed immediately.
+   * `-f` / force mode: terminate the matching processes.
 
 5. **Verbose, TTY‑aware logging**
 
@@ -118,11 +117,14 @@ When executed as a script, `gkill.sh` runs `gkill "$@"` and exits with an approp
 ### Kill processes by name pattern
 
 ```bash
-# Gracefully terminate all matching processes for the current user
+# List the matching processes of the current user, and terminate none
 gkill geany
 
+# Gracefully terminate all of them
+gkill -f geany
+
 # As root, search across all users
-sudo gkill sshd
+sudo gkill -f sshd
 ```
 
 <img width="1602" height="502" alt="image" src="https://github.com/user-attachments/assets/e1c3bba6-4bc1-4a3e-a6ed-591a0493f069" />
@@ -134,7 +136,8 @@ sudo gkill sshd
 gkill -n geany
 ```
 
-Dry‑run mode prints the same process table as normal mode, but with a **DRY‑RUN** header and without the confirmation prompt.
+Dry‑run mode prints the same process table as a call without `-f`, but with a **DRY‑RUN** header,
+and exits with 0.
 
 ### Increase the timeout between signals
 
@@ -152,21 +155,22 @@ gkill -v my_app
 
 Verbose mode shows which signal was sent, whether it succeeded, and how the timeout resolved.
 
-### Force mode (no confirmation)
+### Force mode
 
 ```bash
-# Immediately escalate through the signal chain without asking
+# Escalate through the signal chain
 gkill -f my_app
 ```
 
 > [!IMPORTANT]
-> `-f` can terminate multiple processes at once without additional prompts. Consider using a dry‑run (`-n`) first when working with broad regex patterns.
+> `-f` can terminate multiple processes at once.
+> Run `gkill` without `-f`, or with `-n`, first when working with broad regex patterns.
 
 ### Kill by explicit PID
 
 ```bash
 # Terminate a single known PID
-gkill 12345
+gkill -f 12345
 ```
 
 If the PID no longer exists when `gkill` runs, it is treated as a successful no‑op.
@@ -211,7 +215,7 @@ gkill [-f] [-t seconds] [-n] [-v] [-h] <pid|pattern>
 | Option          | Type      | Default    | Description                                                                 |
 | --------------- | --------- | ---------- | --------------------------------------------------------------------------- |
 | `-h`, `--help`  | flag      | -          | Show help/usage and exit.                                                   |
-| `-f`            | flag      | `false`    | **Force mode**: skip the confirmation prompt and start termination.         |
+| `-f`            | flag      | `false`    | Terminate the matches; without it, `gkill` lists them and exits with `6`.   |
 | `-t <seconds>`  | integer   | `5`        | Timeout to wait after each signal before escalating to the next one.        |
 | `-n`            | flag      | `false`    | **Dry‑run**: resolve and list targets, but do not send any signals.         |
 | `-v`            | flag      | `false`    | **Verbose** output: log every signal step and timeout result per process.   |
@@ -247,12 +251,13 @@ When executed as a script, it calls `exit` with these codes. When sourced, the `
 
 | Code | Constant                    | Meaning                                                              |
 | ---- | --------------------------- | -------------------------------------------------------------------- |
-| `0`  | -                           | Success (all targeted processes terminated, or operation cancelled). |
+| `0`  | -                           | Success: the targets are gone, or `-n` listed them.                  |
 | `1`  | `GK_ERR_GENERAL`            | General or unexpected error.                                         |
 | `2`  | `GK_ERR_USAGE`              | Invalid usage (bad arguments, missing PID/pattern, invalid timeout). |
 | `3`  | `GK_ERR_NO_PROCESS`         | No running processes matched the given PID or pattern.               |
 | `4`  | `GK_ERR_PARTIAL_FAILURE`    | Some processes could not be terminated (e.g. permission denied).     |
 | `5`  | `GK_ERR_MISSING_DEPENDENCY` | Required system utility (currently `pgrep`) is missing.              |
+| `6`  | `GK_ERR_FORCE_REQUIRED`     | Processes match, but `-f` was not given, so none was terminated.     |
 
 Example usage in a script:
 
