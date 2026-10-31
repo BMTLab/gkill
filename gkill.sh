@@ -590,6 +590,10 @@ function __gk_attempt_signal_step() {
 #   3: Verbose flag (bool).
 #   4: Dry-run flag (bool).
 #
+# Outputs:
+#   The log of the steps to stdout;
+#   the error of a process that stays alive to stderr.
+#
 # Returns:
 #   0: Successfully killed or already gone.
 #   1: Failed to kill.
@@ -604,8 +608,7 @@ function __gk_kill_single_pid() {
   local -r process_owner="$(__gk_get_process_owner "$pid_to_kill")"
 
   # Colors go to a terminal only, as __gk_should_color decides.
-  # The header and the failure line carry them inside their text,
-  # where __gk_log cannot strip them.
+  # The header carries them inside its text, where __gk_log cannot strip them.
   local color_red='' color_yellow='' color_green='' color_reset=''
 
   if __gk_should_color; then
@@ -671,14 +674,10 @@ function __gk_kill_single_pid() {
     return 0
   fi
 
-  # Failure
-  local -r failure_log_msg=$(
-    printf \
-      '  %bERROR: PID %d is still alive (Zombie, or Permission Denied)%b' \
-      "$color_red" "$pid_to_kill" "$color_reset"
-  )
-  # Always log error
-  __gk_log true "$failure_log_msg"
+  # Failure: the error goes to stderr, apart from the log of the steps on stdout,
+  # and without color, as the errors of __gk_error.
+  printf '  ERROR: PID %d is still alive (Zombie, or Permission Denied)\n' \
+    "${pid_to_kill}" >&2
 
   return 1
 }
